@@ -3,17 +3,44 @@
 ### import ###
 
 import xlsxwriter
+import urllib2
+import xml.etree.cElementTree as ET
+import argparse
+
+
+#input args
+parser = argparse.ArgumentParser(description="Get the arguments commandline")
+parser.add_argument("-p", "--phs", dest="phs", required=True,
+                     help="Specifies the phs namespace for the submission.")
+parser.add_argument("-v", "--verbose", dest="verbose", required=False,
+                     help="Runs the program in verbose mode.")                     
+args = parser.parse_args()
+phs = args.phs
+
+#get sample info from dbGap
+sampinfo = urllib2.urlopen('http://www.ncbi.nlm.nih.gov/projects/gap/cgi-bin/GetSampleStatus.cgi?study_id=' + phs +'&rettype=xml')
+#sampinfo = response.read()
+#sampinfo = open('/panfs/pan1.be-md.ncbi.nlm.nih.gov/trace_work/backup/stineaj/phs000339.xml', 'r')
+#print sampinfo
+tree = ET.parse(sampinfo)
+#print tree
+for node in tree.iter('Sample'):
+   ssid = node.attrib.get('submitted_sample_id')
+   status = node.attrib.get('dbgap_status')
+#    if ssid:
+#   print '  %s :: %s' % (ssid, status)
+
 
 # Create an new Excel file.
-workbook = xlsxwriter.Workbook('submission.xlsx', {'in_memory' : True})
+workbook = xlsxwriter.Workbook(str(phs) + '_submission.xlsx', {'in_memory' : True})
 
 # set formatting types
 bold = workbook.add_format({'bold' : True})
 contact = workbook.add_format({'bold' : True, 'bg_color' : '#4F81BD', 'font_color' : 'white', 'align': 'right'})
-required = workbook.add_format({'bold' : True, 'bg_color' : '#4F81BD', 'font_color' : 'white', 'text_wrap': True})
-aligned = workbook.add_format({'bold' : True, 'bg_color' : 'green', 'font_color' : 'white', 'text_wrap': True})
-paired = workbook.add_format({'bold' : True, 'bg_color' : '#808080', 'font_color' : 'white', 'text_wrap': True})
-lists = workbook.add_format({'bold' : True, 'bg_color' : '#FFEB9C', 'font_color': '#9C6500'}) 
+required = workbook.add_format({'bold' : True, 'bg_color' : '#4F81BD', 'font_color' : 'white', 'text_wrap': True, 'right' : 1})
+aligned = workbook.add_format({'bold' : True, 'bg_color' : 'green', 'font_color' : 'white', 'text_wrap': True, 'right' : 1})
+paired = workbook.add_format({'bold' : True, 'bg_color' : '#808080', 'font_color' : 'white', 'text_wrap': True, 'right' : 1})
+lists = workbook.add_format({'bold' : True, 'bg_color' : '#FFEB9C', 'font_color': '#9C6500', 'right' : 1}) 
 url_format = workbook.add_format ({'font_color': 'blue', 'underline': True})
 
 # tuples and dictionaries ###
@@ -92,7 +119,7 @@ SELECTION = [
 PLATFORMS = {
 "_LS454" : ( "454 GS", "454 GS 20", "454 GS FLX", "454 GS FLX+", "454 GS FLX Titanium", "454 GS Junior", "unspecified" ),
 "ILLUMINA" : ( "Illumina Genome Analyzer", "Illumina Genome Analyzer II", "Illumina Genome Analyzer IIx", 
-"Illumina HiScanSQ", "Illumina HiSeq 2500", "Illumina HiSeq 2000", "Illumina HiSeq 1500", "Illumina HiSeq 1000", "Illumina MiSeq", "Illumina NextSeq 500", "HiSeq X Ten", "unspecified" ),
+"Illumina HiScanSQ", "Illumina HiSeq 2500", "Illumina HiSeq 2000", "Illumina HiSeq 1500", "Illumina HiSeq 1000", "Illumina MiSeq", "Illumina NextSeq 550","Illumina NextSeq 500", "HiSeq X Ten", "unspecified" ),
 "HELICOS" : ( "Helicos HeliScope", "unspecified" ),
 "ABI_SOLID" : ( "AB SOLiD System", "AB SOLiD System 2.0", "AB SOLiD System 3.0", "AB SOLiD 4 System", "AB SOLiD 4hq System", "AB SOLiD 3 Plus System",
 "AB SOLiD PI System", "AB 5500 Genetic Analyzer", "AB 5500xl Genetic Analyzer", "AB 5500xl-W Genetic Analyzer", "unspecified" ),
@@ -113,6 +140,7 @@ FILETYPES = (
 
 # create instructions page
 worksheet = workbook.add_worksheet('Instructions and Contact Info')
+worksheet.set_tab_color('red')
 worksheet.set_column('A:A', 45)
 worksheet.set_column('B:D',25)
 worksheet.set_row('35:35', 32)
@@ -168,13 +196,12 @@ worksheet.write_column('H72', PLATFORMS['CAPILLARY'])
 worksheet.write_column('I72', PLATFORMS['OXFORD_NANOPORE'])
 worksheet.write_column('J72', PLATFORMS['HELICOS'])
 
-### TO DO ###
-# define names for the platforms
+#Define Names for Platforms and Models
 workbook.define_name('Strategy',        '=Terms!$A$3:$A$30')
 workbook.define_name('Source',          '=Terms!$A$33:$A$39')
 workbook.define_name('Selection',       '=Terms!$A$42:$A$68')
 workbook.define_name('Platforms',       '=Terms!$A$72:$A$80')
-workbook.define_name('ILLUMINA',        '=Terms!$B$72:$B$83')
+workbook.define_name('ILLUMINA',        '=Terms!$B$72:$B$84')
 workbook.define_name('_LS454',          '=Terms!$C$72:$C$78')
 workbook.define_name('COMPLETE_GENOMICS', '=Terms!$D$72:$D$72')
 workbook.define_name('ABI_SOLID',       '=Terms!$E$72:$E$82')
@@ -184,9 +211,20 @@ workbook.define_name('CAPILLARY',       '=Terms!$H$72:$H$79')
 workbook.define_name('OXFORD_NANOPORE', '=Terms!$I$72:$I$74')
 workbook.define_name('HELICOS',         '=Terms!$J$72:$J$73')
 
-# create data page
+# Create Data Page
 worksheet = workbook.add_worksheet('SRA_Data')
+worksheet.set_tab_color('yellow')
+
+
+# Write links from Library Controlled Vocab to the Terms page
+worksheet.write_url('E1', 'internal:Terms!$A$3')
+worksheet.write_url('F1', 'internal:Terms!$A$33')
+worksheet.write_url('G1', 'internal:Terms!$A$42')
+worksheet.write_url('I1', 'internal:Terms!$A$71')
+
+# Format Data Page and Add Headers
 worksheet.set_column('A:U', 20)
+worksheet.freeze_panes(0,3)
 worksheet.write_row('A1', ('phs_accession', 'sample_name', 'library_ID', 'title/short description', 'library_strategy (click for details)', 'library_source (click for details)', 'library_selection (click for details)', 'library_layout', 'platform (click for details)', 'instrument_model', 'design_description'), required)
 worksheet.write_row('L1', ('reference_genome_assembly (or accession)', 'alignment_software'), aligned)
 worksheet.write('N1', 'forward_read_length', required)
@@ -194,17 +232,42 @@ worksheet.write('O1', 'reverse_read_length', paired)
 worksheet.write_row('P1', ('filetype', 'filename', 'MD5_checksum'), required)
 worksheet.write_row('S1', ('filetype', 'filename', 'MD5_checksum'), paired)
 
-# data validation
-### TO DO ####
-# probaby need a constructor to do the data validation based on the number of cells.
-# worksheet.write_row('A2',(phs, sample), bold)
-worksheet.write_row('E2',(None,None,None,None,None,None), lists)
-worksheet.data_validation('E2', {'validate': 'list', 'source': '=Strategy'})
-worksheet.data_validation('F2', {'validate': 'list', 'source': '=Source'})
-worksheet.data_validation('G2', {'validate': 'list', 'source': '=Selection'})
-worksheet.data_validation('H2', {'validate': 'list', 'source': ['single', 'paired']})
-worksheet.data_validation('I2', {'validate': 'list', 'source': '=Platforms'})
-worksheet.data_validation('J2', {'validate': 'list', 'source': '=INDIRECT($I2)'})
+# Add Data Page Comments
+worksheet.write_comment('A1', 'The phs accession in the format phs000000; NOT including version (.v/.p) numbers.')
+worksheet.write_comment('B1', 'The sample_name as described in the dbGaP submission documents (also called submitted_sample_name or SAMPID).')
+worksheet.write_comment('C1', 'A short unique identifier for the sequencing library. Each library_ID MUST be unique!')
+worksheet.write_comment('D1', 'Short description that will identify the dataset on public pages. A clear and concise formula for the title would be:' + "\n\n" + '{methodology}' + "\n\n" + 'of {organism}: {sample info}' + "\n\n" + ' e.g.' + "\n\n" + 'RNA-Seq of mus musculus: adult female spleen', {'width': 300, 'height': 200})
+worksheet.write_comment('H1', 'Paired-end or Single')
+worksheet.write_comment('K1', 'Free-form description of the methods used to create the sequencing library; a brief \'materials and methods\' section.')
+worksheet.write_comment('L1', 'For bam-format files. Please include NCBI accession(s) or assembly name.')
+worksheet.write_comment('M1', 'Please include version #, if known.')
+worksheet.write_comment('N1', 'Maximum length of the first biological read in a paired library or the only read of a fragment library.')
+worksheet.write_comment('O1', 'PAIRED ONLY')
+worksheet.write_comment('P1', 'Format of the data file to be submitted.  Must be one of the types in the list. ')
+worksheet.write_comment('Q1', 'File name including all extensions, but NOT path information.')
+worksheet.write_comment('R1', 'Checksum generated by the MD5 algorithm for the indicated file.')
+worksheet.write_comment('S1', 'PAIRED ONLY Format of the data file to be submitted.  Must be one of the types in the list.')
+worksheet.write_comment('T1', 'PAIRED ONLY File name including all extensions, but NOT path information')
+worksheet.write_comment('U1', 'PAIRED ONLY Checksum generated by the MD5 algorithm for the indicated file')
 
+# Enter Samples from the dbGaP service into rows along with formatting.
+x = 2
+for node in tree.iter('Sample'):
+   ssid = node.attrib.get('submitted_sample_id')
+   status = node.attrib.get('dbgap_status')
+   if status == 'Loaded':
+       worksheet.write_row('E' + str(x),(None,None,None,None,None,None), lists)
+       worksheet.write('A' + str(x), phs, bold)
+       worksheet.write('B' + str(x), ssid, bold)
+       worksheet.data_validation('E' + str(x), {'validate': 'list', 'source': '=Strategy'})
+       worksheet.data_validation('F' + str(x), {'validate': 'list', 'source': '=Source'})
+       worksheet.data_validation('G' + str(x), {'validate': 'list', 'source': '=Selection'})
+       worksheet.data_validation('H' + str(x), {'validate': 'list', 'source': ['single', 'paired']})
+       worksheet.data_validation('I' + str(x), {'validate': 'list', 'source': '=Platforms'})
+       worksheet.data_validation('J' + str(x), {'validate': 'list', 'source': '=INDIRECT($I' + str(x) + ')'})
+       x += 1
+   print '  %s :: %s :: %s' % (ssid, status, 'A' + str(x))
+   
+   
 
 workbook.close()
