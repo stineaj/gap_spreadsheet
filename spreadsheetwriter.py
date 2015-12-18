@@ -1,14 +1,13 @@
 #! /usr/bin/env python
 
-### import ###
-
+### Import ###
 import xlsxwriter
 import urllib2
 import xml.etree.cElementTree as ET
 import argparse
 
 
-#input args
+### Input Args ###
 parser = argparse.ArgumentParser(description="Get the arguments commandline")
 parser.add_argument("-p", "--phs", dest="phs", required=True,
                      help="Specifies the phs namespace for the submission.")
@@ -17,24 +16,20 @@ parser.add_argument("-v", "--verbose", dest="verbose", required=False,
 args = parser.parse_args()
 phs = args.phs
 
-#get sample info from dbGap
+
+### Get Sample Info from dbGap ###
 sampinfo = urllib2.urlopen('http://www.ncbi.nlm.nih.gov/projects/gap/cgi-bin/GetSampleStatus.cgi?study_id=' + phs +'&rettype=xml')
-#sampinfo = response.read()
-#sampinfo = open('/panfs/pan1.be-md.ncbi.nlm.nih.gov/trace_work/backup/stineaj/phs000339.xml', 'r')
-#print sampinfo
 tree = ET.parse(sampinfo)
-#print tree
 for node in tree.iter('Sample'):
    ssid = node.attrib.get('submitted_sample_id')
    status = node.attrib.get('dbgap_status')
-#    if ssid:
-#   print '  %s :: %s' % (ssid, status)
 
 
-# Create an new Excel file.
+### Create a New Excel file. ###
 workbook = xlsxwriter.Workbook(str(phs) + '_submission.xlsx', {'in_memory' : True})
 
-# set formatting types
+
+### Set Formatting Types ###
 bold = workbook.add_format({'bold' : True})
 contact = workbook.add_format({'bold' : True, 'bg_color' : '#4F81BD', 'font_color' : 'white', 'align': 'right'})
 required = workbook.add_format({'bold' : True, 'bg_color' : '#4F81BD', 'font_color' : 'white', 'text_wrap': True, 'right' : 1})
@@ -43,8 +38,8 @@ paired = workbook.add_format({'bold' : True, 'bg_color' : '#808080', 'font_color
 lists = workbook.add_format({'bold' : True, 'bg_color' : '#FFEB9C', 'font_color': '#9C6500', 'right' : 1}) 
 url_format = workbook.add_format ({'font_color': 'blue', 'underline': True})
 
-# tuples and dictionaries ###
 
+### Dictionaries and Terms ###
 STRATEGY = [
 ['WGA', 'Random sequencing of the whole genome following non-pcr amplification'],
 ['WGS', 'Random sequencing of the whole genome'],
@@ -138,13 +133,14 @@ FILETYPES = (
 )
 
 
-# create instructions page
+### Create Instructions Page ###
 worksheet = workbook.add_worksheet('Instructions and Contact Info')
 worksheet.set_tab_color('red')
 worksheet.set_column('A:A', 45)
 worksheet.set_column('B:D',25)
 worksheet.set_row('35:35', 32)
 
+### Write Instructions on Page ###
 worksheet.write_column('A1', ['submission_name', 'contact_name', 'inform_on_status'],contact)
 worksheet.write_comment('A1', 'Must be a unique name for the submitting user or group.  Is a tracking tool but not a title for users.')
 worksheet.write_comment('A2', 'Name of submission owner')
@@ -162,7 +158,6 @@ worksheet.write_column('A5', [
             'Some column headers have hyperlinks to NCBI webpages.',
             'The YELLOW columns have drop-down menus that allow you to select from a controlled vocabulary. Once specified for one row, these values can be copied-and-pasted down.'
             ], bold)
-            
 worksheet.insert_image('A14', '/home/stineaj/bin/resources/example.png', {'x_scale': 0.9, 'y_scale': 0.9, 'x_offset': 15})
 worksheet.write_column('A31', [
             'Many of the columns also have data checks - if you received a warning, please verify that you have attempted to enter a correct value.', 
@@ -178,7 +173,8 @@ worksheet.write('D35', 'paired-end data only', paired)
 worksheet.write('A37', 'SRA submission overview:', bold)
 worksheet.write('B37', 'http://www.ncbi.nlm.nih.gov/books/NBK242619/', url_format)
 
-### create terms page 
+
+### Create Terms Page ### 
 worksheet = workbook.add_worksheet('Terms')
 worksheet.set_column('A:J', 25)
 worksheet.add_table('A2:B30', {'style': 'Table Style Light 9', 'autofilter': False, 'data': STRATEGY, 'columns': [{'header': 'Strategy'},{'header': 'Description'},]})
@@ -196,7 +192,8 @@ worksheet.write_column('H72', PLATFORMS['CAPILLARY'])
 worksheet.write_column('I72', PLATFORMS['OXFORD_NANOPORE'])
 worksheet.write_column('J72', PLATFORMS['HELICOS'])
 
-#Define Names for Platforms and Models
+
+### Define Names for Platforms and Models ###
 workbook.define_name('Strategy',        '=Terms!$A$3:$A$30')
 workbook.define_name('Source',          '=Terms!$A$33:$A$39')
 workbook.define_name('Selection',       '=Terms!$A$42:$A$68')
@@ -211,18 +208,20 @@ workbook.define_name('CAPILLARY',       '=Terms!$H$72:$H$79')
 workbook.define_name('OXFORD_NANOPORE', '=Terms!$I$72:$I$74')
 workbook.define_name('HELICOS',         '=Terms!$J$72:$J$73')
 
-# Create Data Page
+
+### Create Data Page ###
 worksheet = workbook.add_worksheet('SRA_Data')
 worksheet.set_tab_color('yellow')
 
 
-# Write links from Library Controlled Vocab to the Terms page
+### Write links from Library Controlled Vocab to the Terms page###
 worksheet.write_url('E1', 'internal:Terms!$A$3')
 worksheet.write_url('F1', 'internal:Terms!$A$33')
 worksheet.write_url('G1', 'internal:Terms!$A$42')
 worksheet.write_url('I1', 'internal:Terms!$A$71')
 
-# Format Data Page and Add Headers
+
+### Format Data Page and Add Headers ###
 worksheet.set_column('A:U', 20)
 worksheet.freeze_panes(0,3)
 worksheet.write_row('A1', ('phs_accession', 'sample_name', 'library_ID', 'title/short description', 'library_strategy (click for details)', 'library_source (click for details)', 'library_selection (click for details)', 'library_layout', 'platform (click for details)', 'instrument_model', 'design_description'), required)
@@ -232,7 +231,7 @@ worksheet.write('O1', 'reverse_read_length', paired)
 worksheet.write_row('P1', ('filetype', 'filename', 'MD5_checksum'), required)
 worksheet.write_row('S1', ('filetype', 'filename', 'MD5_checksum'), paired)
 
-# Add Data Page Comments
+### Add Data Page Comments ###
 worksheet.write_comment('A1', 'The phs accession in the format phs000000; NOT including version (.v/.p) numbers.')
 worksheet.write_comment('B1', 'The sample_name as described in the dbGaP submission documents (also called submitted_sample_name or SAMPID).')
 worksheet.write_comment('C1', 'A short unique identifier for the sequencing library. Each library_ID MUST be unique!')
@@ -250,7 +249,7 @@ worksheet.write_comment('S1', 'PAIRED ONLY Format of the data file to be submitt
 worksheet.write_comment('T1', 'PAIRED ONLY File name including all extensions, but NOT path information')
 worksheet.write_comment('U1', 'PAIRED ONLY Checksum generated by the MD5 algorithm for the indicated file')
 
-# Enter Samples from the dbGaP service into rows along with formatting.
+###  Enter Samples from the dbGaP service into rows along with formatting. ###
 x = 2
 for node in tree.iter('Sample'):
    ssid = node.attrib.get('submitted_sample_id')
@@ -267,7 +266,7 @@ for node in tree.iter('Sample'):
        worksheet.data_validation('J' + str(x), {'validate': 'list', 'source': '=INDIRECT($I' + str(x) + ')'})
        x += 1
    print '  %s :: %s :: %s' % (ssid, status, 'A' + str(x))
-   
-   
 
+
+### Close Out Workbook ###   
 workbook.close()
