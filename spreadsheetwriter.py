@@ -256,6 +256,8 @@ for node in tree.iter('Sample'):
    status = node.attrib.get('dbgap_status')
    if status == 'Loaded':
        worksheet.write_row('E' + str(x),(None,None,None,None,None,None), lists)
+       worksheet.write('P' + str(x),None, lists)
+       worksheet.write('S' + str(x),None, lists)
        worksheet.write('A' + str(x), phs, bold)
        worksheet.write('B' + str(x), ssid, bold)
        worksheet.data_validation('E' + str(x), {'validate': 'list', 'source': '=Strategy'})
@@ -264,6 +266,12 @@ for node in tree.iter('Sample'):
        worksheet.data_validation('H' + str(x), {'validate': 'list', 'source': ['single', 'paired']})
        worksheet.data_validation('I' + str(x), {'validate': 'list', 'source': '=Platforms'})
        worksheet.data_validation('J' + str(x), {'validate': 'list', 'source': '=INDIRECT($I' + str(x) + ')'})
+       worksheet.data_validation('P' + str(x), {'validate': 'list', 'source': ["bam", "sra", "kar", "srf", "sff", "fastq", "tab", "454_native",
+"Helicos_native", "SOLiD_native_csfasta", "SOLiD_native_qual", "SOLiD_native",
+"PacBio_HDF5", "CompleteGenomics_native"]})
+       worksheet.data_validation('S' + str(x), {'validate': 'list', 'source': ["bam", "sra", "kar", "srf", "sff", "fastq", "tab", "454_native",
+"Helicos_native", "SOLiD_native_csfasta", "SOLiD_native_qual", "SOLiD_native",
+"PacBio_HDF5", "CompleteGenomics_native"]})
        x += 1
    print '  %s :: %s :: %s' % (ssid, status, 'A' + str(x))
 
